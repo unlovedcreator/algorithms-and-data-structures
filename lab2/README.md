@@ -6,14 +6,14 @@
 
 ## Содержание
 - [Лабораторная работа №2: Анализ сложности алгоритмов. Шаблоны классов](#лабораторная-работа-2-анализ-сложности-алгоритмов-шаблоны-классов)
-  - [Содержание](#содержание)
-  - [Цель работы](#цель-работы)
-  - [Теоретическая часть](#теоретическая-часть)
-  - [Выполнение индивидуального задания](#выполнение-индивидуального-задания)
-    - [Код для индивидуального задания](#код-для-индивидуального-задания)
-    - [Результат работы](#результат-работы)
-  - [Ответы на вопросы](#ответы-на-вопросы)
-  - [Вывод](#вывод)
+	- [Содержание](#содержание)
+	- [Цель работы](#цель-работы)
+	- [Теоретическая часть](#теоретическая-часть)
+	- [Выполнение индивидуального задания](#выполнение-индивидуального-задания)
+		- [Код для индивидуального задания](#код-для-индивидуального-задания)
+		- [Результат работы](#результат-работы)
+	- [Ответы на вопросы](#ответы-на-вопросы)
+	- [Вывод](#вывод)
 
 ## Цель работы
 1. Научиться оценивать эффективность алгоритмов с помощью Онотации (Big O).
@@ -40,19 +40,19 @@ SparseArray<T> set, get, remove, size (разрежённый массив).
 ### Код для индивидуального задания
 ``` cpp
 #include <iostream>
-#include <iomanip>
-#include <chrono>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <random>
+#include <iomanip>				// для форматирования таблицы setw
+#include <chrono>				// для функций измерения времени
+#include <vector>				
+#include <map>					// для сравнений (бинарное дерево)
+#include <unordered_map>		// для сравнений (хеш-таблица)
+#include <random>	
 #include <stdexcept>
-#include <algorithm>
+#include <algorithm>			// для shuffle (перемешивание порядка запросов)
 
 using namespace std;
 using namespace chrono;
 
-// SparseArray<T> - разрежённый массив,хранящий только явно заданные элементы 
+// SparseArray<T> - разрежённый массив, хранящий только явно заданные элементы 
 // в виде отсортированного по индексу вектора пар (index, value). 
 // Все остальные позиции считаются равными значению по умолчанию.
 //
@@ -75,7 +75,8 @@ class SparseArray {
 	size_t length_;
 	T default_;
 
-	// первая позиция, где data_[pos].index >= i; O(log k)
+	// Это ручная реализация std::lower_bound: бинарный поиск первой позиции, где data_[pos].index >= i.
+	// O(log k)
 	size_t lowerBound(size_t i) const {
 		size_t lo = 0, hi = data_.size();
 		while (lo < hi) {
@@ -85,6 +86,8 @@ class SparseArray {
 		}
 		return lo;
 	}
+
+	// Бросает out_of_range, если i >= length_. Проверка идёт по логической длине, а не по размеру вектора.
 	void check(size_t i) const {
 		if (i >= length_) throw out_of_range("SparseArray: index out of range");
 	}
@@ -94,6 +97,8 @@ public:
 		: length_(length), default_(def) {
 	}
 
+	// Поиск: O(log k). Обновление существующего: O(1) после поиска. Вставка нового в середину: vector::insert сдвигает все элементы правее на одну позицию, то есть O(k).
+	// Вставка в конец (индексы по возрастанию): сдвигать нечего, амортизированно O(1).
 	void set(size_t i, const T& v) {
 		check(i);
 		size_t pos = lowerBound(i);
@@ -103,6 +108,7 @@ public:
 			data_.insert(data_.begin() + pos, Entry{ i, v });	// вставка
 	}
 
+	// Находит позицию через lowerBound. Если индекс найден, возвращает значение, иначе default_. Возвращается const T&, то есть копирования нет. Ссылка на default_ работает, пока жив сам объект. Сложность O(log k).
 	const T& get(size_t i) const {
 		check(i);
 		size_t pos = lowerBound(i);
@@ -111,6 +117,7 @@ public:
 		return default_;
 	}
 
+	// Ищет позицию, при совпадении индекса делает erase (сдвиг влево, O(k)) и возвращает true. Если элемента не было, возвращает false. O(log k) + O(k).
 	bool remove(size_t i) {
 		check(i);
 		size_t pos = lowerBound(i);
@@ -134,6 +141,7 @@ long long measureTime(Func func) {
 	return duration_cast<microseconds>(end - start).count();
 }
 
+// Проверка на массиве длиной 10^9 методов и пограничных значений
 // Функциональные тесты
 void testCorrectness() {
 	SparseArray<int> a(1000000000, -1);
@@ -144,13 +152,13 @@ void testCorrectness() {
 		&& a.size() == 2 && a.remove(5) && !a.remove(5) && a.size() == 1
 		&& a.get(5) == -1;
 	bool thrown = false;
-	try { a.get(1000000000); }
+	try { a.get(1000000000); }				// безопасная обработка исключений
 	catch (const out_of_range&) { thrown = true; }
 	cout << "Tests: " << ((ok && thrown) ? "OK" : "FAIL") << "\n\n";
 }
 
 // Эксперимент
-volatile long long sink;							// чтобы компилятор не выкинул вызовы get
+volatile long long sink;			// чтобы компилятор не выкинул вызовы get
 
 int main() {
 	setlocale(LC_ALL, "RU");
